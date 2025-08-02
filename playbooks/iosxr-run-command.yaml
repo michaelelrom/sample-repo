@@ -1,0 +1,52 @@
+# ansible-playbook -i inventory.yaml iosxr-run-command.yaml --extra-vars="deviceName=8000v-1 command='show version'"
+---
+- connection: network_cli
+  gather_facts: no
+  hosts: "{{ deviceName }}"
+  vars:
+    ansible_network_os: iosxr
+    ansible_connection: network_cli
+
+  tasks:
+    # Phase 1: Validate parameters
+    - name: Validate command parameter
+      assert:
+        that:
+          - command is defined
+          - command | length > 0
+        fail_msg: "Command parameter must be provided"
+      register: command_validation
+
+    # Phase 2: Execute command on IOS-XR device
+    - name: Run command on IOS-XR device
+      cisco.iosxr.iosxr_command:
+        commands:
+          - "{{ command }}"
+      register: command_result
+
+    # Phase 3: Format and display results
+    - name: Set command execution result
+      set_fact:
+        execution_result:
+          device:
+            name: "{{ inventory_hostname }}"
+            platform: "Cisco IOS-XR"
+          command:
+            executed: "{{ command }}"
+            timestamp: "{{ ansible_date_time.iso8601 }}"
+          output:
+            raw: "{{ command_result.stdout[0] | default('') }}"
+            success: "{{ command_result is succeeded }}"
+            changed: "{{ command_result is changed }}"
+            
+    - name: Display command output
+      debug:
+        msg: "{{ execution_result | to_json(indent=2) }}"
+      
+    # Phase 4: Save output to file (optional)
+    - name: Save command output to file
+      local_action:
+        module: copy
+        content: "{{ execution_result | to_json(indent=2) }}"
+        dest: "./output/{{ inventory_hostname }}_command_result.json"
+      when: save_output | default(false) | bool
