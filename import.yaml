@@ -167,6 +167,26 @@ decorators:
             - username
             - password
         type: object
+    - name: iosxr-run-command-decorator
+      schema:
+        $id: root
+        $schema: http://json-schema.org/draft-07/schema#
+        additionalProperties: false
+        properties:
+            deviceName:
+                description: IOS-XR device name as defined in inventory
+                type: string
+            command:
+                description: Command to execute on the IOS-XR device
+                type: string
+            save_output:
+                default: false
+                description: Save command output to file (optional)
+                type: boolean
+        required:
+            - deviceName
+            - command
+        type: object
 repositories:
     - name: autocon3-content
       url: https://github.com/itential/autocon3-iag-assets.git
@@ -205,3 +225,15 @@ services:
       working-directory: scripts/juniper-junos-ospf-status
       repository: autocon3-content
       decorator: juniper-junos-ospf-status-decorator
+    - name: iosxr-run-command
+      type: ansible-playbook
+      description: Ansible playbook that runs commands on Cisco IOS-XR devices
+      playbooks:
+        - iosxr-run-command.yaml
+      working-directory: playbooks
+      repository: autocon3-content
+      decorator: iosxr-run-command-decorator
+      runtime:
+        inventory:
+            - inventory.yaml
+        config-file: ansible.cfg
